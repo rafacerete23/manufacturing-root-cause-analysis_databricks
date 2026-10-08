@@ -1,7 +1,7 @@
 <img src=https://raw.githubusercontent.com/databricks-industry-solutions/.github/main/profile/solacc_logo.png width="600px">
 
-[![DBR](https://img.shields.io/badge/DBR-CHANGE_ME-red?logo=databricks&style=for-the-badge)](https://docs.databricks.com/release-notes/runtime/CHANGE_ME.html)
-[![CLOUD](https://img.shields.io/badge/CLOUD-CHANGE_ME-blue?logo=googlecloud&style=for-the-badge)](https://databricks.com/try-databricks)
+[![DBR](https://img.shields.io/badge/DBR-17.3_LTS_ML-red?logo=databricks&style=for-the-badge)](https://docs.databricks.com/)
+[![CLOUD](https://img.shields.io/badge/CLOUD-AWS_%7C_Azure-blue?style=for-the-badge)](https://databricks.com/try-databricks)
 
 ## Business Problem
 Root cause analysis is critical in manufacturing for identifying and addressing the underlying factors that lead to defects, inefficiencies, and failures. By pinpointing the true sources of problems, manufacturers can implement targeted solutions to prevent recurrence, enhance product quality, reduce waste, and improve operational efficiency.
@@ -11,6 +11,20 @@ Traditional correlation-based machine learning techniques, which many companies 
 Causal machine learning addresses these challenges by modeling cause-and-effect relationships within complex production processes, moving beyond simple correlations. Leveraging domain knowledge, often represented as knowledge graphs, it captures causal relationships among key variables in manufacturing. This approach enables a clearer distinction between root causes and symptoms, allowing for more accurate identification of issues and their origins.
 
 In this series of notebooks, we demonstrate how causal machine learning techniques can be applied to perform root cause analysis in manufacturing. Using a fictitious scenario where we manage a production line, we explore how various factors affect the quality of processed products, providing a practical introduction to this powerful technique.
+
+## Run the causal core locally (no Databricks)
+
+`local/smoke_test.py` runs the part of this accelerator that does not need Spark, MLflow or Unity Catalog: it reuses `generate_data()` from `99_utils.ipynb` and the causal graph from `01_causal_graph.ipynb`, fits the structural causal model with `dowhy`, and checks both analyses the notebooks teach.
+
+```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r local/requirements-local.txt
+python local/smoke_test.py      # about 2 minutes
+```
+
+Expected: a 9.1% defect rate in training data, rising to 13.6% after the worker mix shifts from 75/25 to 25/75, with the change attributed to `worker` (the only mechanism the generator changes) - the script asserts this.
+
+**Graphviz is now optional.** The notebooks used to start with `%sh apt-get install graphviz`, which cannot run on serverless compute (including Databricks Free Edition) and stopped "Run all". That cell is now commented out and `pygraphviz` is out of `requirements.txt`; without it, `dowhy` draws the same graph with networkx. Running the full notebooks on Free Edition is untested: they still expect Unity Catalog permissions to create a catalog and a 17.3 LTS ML runtime.
 
 ## Reference Architecture
 
