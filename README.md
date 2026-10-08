@@ -25,6 +25,15 @@ python local/smoke_test.py --fast   # about 30 s, see below
 
 `--fast` replaces the kernel independence test that decides which mechanisms changed (57 of the 70 s spent in `distribution_change`, measured with cProfile) with its approximate random-Fourier-feature version, and uses 1,000 instead of 3,000 samples for anomaly attribution. Same root cause, 3x faster, but the approximate test also flags one or two unchanged mechanisms as changed: use it while iterating, and the exact mode for conclusions.
 
+`local/compare_modes.py` measures that trade-off over three seeds (about 4 minutes). The generator changes only `worker`, so every other mechanism the change test flags is a false positive:
+
+| Mode | `distribution_change` time | `worker` ranked first | `worker` share of the attribution | Unchanged mechanisms flagged |
+|------|------|------|------|------|
+| exact (kernel test) | 64 s | 3 of 3 | 0.70 | 0 |
+| fast (approximate kernel test) | 17 s | 3 of 3 | 0.71 | 2 every time (`torque_checks`, `visual_inspection`) |
+
+The approximate test is about 4x faster here and gets the root cause right, but it consistently reports two downstream inspection steps as changed when they are not. In a real investigation that sends someone to check equipment that is fine: use `--fast` to iterate, and confirm with the exact test.
+
 Expected: a 9.1% defect rate in training data, rising to 13.6% after the worker mix shifts from 75/25 to 25/75, with the change attributed to `worker` (the only mechanism the generator changes) - the script asserts this.
 
 **Graphviz is now optional.** The notebooks used to start with `%sh apt-get install graphviz`, which cannot run on serverless compute (including Databricks Free Edition) and stopped "Run all". That cell is now commented out and `pygraphviz` is out of `requirements.txt`; without it, `dowhy` draws the same graph with networkx. Running the full notebooks on Free Edition is untested: they still expect Unity Catalog permissions to create a catalog and a 17.3 LTS ML runtime.

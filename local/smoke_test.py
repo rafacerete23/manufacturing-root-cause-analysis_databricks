@@ -55,29 +55,34 @@ def top(attr: dict, k: int = 3) -> list[tuple[str, float]]:
     return sorted(vals.items(), key=lambda kv: -abs(kv[1]))[:k]
 
 
-parser = argparse.ArgumentParser(description="Causal RCA smoke test outside Databricks")
-parser.add_argument("--fast", action="store_true", help="approximate tests (see module docstring)")
-fast = parser.parse_args().fast
-change_tests = {"independence_test": approx_kernel_based, "conditional_independence_test": approx_kernel_based} if fast else {}
-anomaly_samples_n = 1000 if fast else 3000
-start = time.time()
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Causal RCA smoke test outside Databricks")
+    parser.add_argument("--fast", action="store_true", help="approximate tests (see module docstring)")
+    fast = parser.parse_args().fast
+    change_tests = {"independence_test": approx_kernel_based, "conditional_independence_test": approx_kernel_based} if fast else {}
+    anomaly_samples_n = 1000 if fast else 3000
+    start = time.time()
 
-train = generate_data(None, None, 5000, train=False)[nodes]
-print(f"train: {len(train)} parts, defect rate {train['quality'].mean():.1%}")
+    train = generate_data(None, None, 5000, train=False)[nodes]
+    print(f"train: {len(train)} parts, defect rate {train['quality'].mean():.1%}")
 
-np.random.seed(1)
-scm = gcm.StructuralCausalModel(graph)
-gcm.auto.assign_causal_mechanisms(scm, train)
-gcm.fit(scm, train)
+    np.random.seed(1)
+    scm = gcm.StructuralCausalModel(graph)
+    gcm.auto.assign_causal_mechanisms(scm, train)
+    gcm.fit(scm, train)
 
-defect = train[train["quality"] == 1].head(1)
-print("anomaly attribution, first defective part:", top(gcm.attribute_anomalies(scm, "quality", anomaly_samples=defect, num_distribution_samples=anomaly_samples_n)))
+    defect = train[train["quality"] == 1].head(1)
+    print("anomaly attribution, first defective part:", top(gcm.attribute_anomalies(scm, "quality", anomaly_samples=defect, num_distribution_samples=anomaly_samples_n)))
 
-test = generate_data(None, None, 1000, p_worker=0.25, train=False)[nodes]
-print(f"test (p_worker 0.75 -> 0.25): defect rate {test['quality'].mean():.1%}")
-change = gcm.distribution_change(scm, train, test, target_node="quality",
-                                 difference_estimation_func=lambda x, y: np.mean(y) - np.mean(x), **change_tests)
-ranked = top(change, k=len(change))
-print("distribution-change attribution:", ranked[:3])
-assert ranked[0][0] == "worker", f"expected `worker` as the root cause of the shift, got {ranked[0][0]}"
-print(f"OK: the shift is attributed to `worker`, the only mechanism the generator changed ({'fast' if fast else 'exact'} mode, {time.time() - start:.0f} s)")
+    test = generate_data(None, None, 1000, p_worker=0.25, train=False)[nodes]
+    print(f"test (p_worker 0.75 -> 0.25): defect rate {test['quality'].mean():.1%}")
+    change = gcm.distribution_change(scm, train, test, target_node="quality",
+                                     difference_estimation_func=lambda x, y: np.mean(y) - np.mean(x), **change_tests)
+    ranked = top(change, k=len(change))
+    print("distribution-change attribution:", ranked[:3])
+    assert ranked[0][0] == "worker", f"expected `worker` as the root cause of the shift, got {ranked[0][0]}"
+    print(f"OK: the shift is attributed to `worker`, the only mechanism the generator changed ({'fast' if fast else 'exact'} mode, {time.time() - start:.0f} s)")
+
+
+if __name__ == "__main__":
+    main()
