@@ -19,8 +19,11 @@ In this series of notebooks, we demonstrate how causal machine learning techniqu
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r local/requirements-local.txt
-python local/smoke_test.py      # about 2 minutes
+python local/smoke_test.py          # exact tests, about 90 s
+python local/smoke_test.py --fast   # about 30 s, see below
 ```
+
+`--fast` replaces the kernel independence test that decides which mechanisms changed (57 of the 70 s spent in `distribution_change`, measured with cProfile) with its approximate random-Fourier-feature version, and uses 1,000 instead of 3,000 samples for anomaly attribution. Same root cause, 3x faster, but the approximate test also flags one or two unchanged mechanisms as changed: use it while iterating, and the exact mode for conclusions.
 
 Expected: a 9.1% defect rate in training data, rising to 13.6% after the worker mix shifts from 75/25 to 25/75, with the change attributed to `worker` (the only mechanism the generator changes) - the script asserts this.
 
